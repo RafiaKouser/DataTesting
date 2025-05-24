@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Flow Analysis Tool - Enhanced</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            height: calc(100vh - 180px);
+        }
+
+        .controls-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow-y: auto;
+        }
+
+        .results-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow-y: auto;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.9rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .process-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 20px;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .process-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #718096;
+            transition: color 0.3s ease;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .summary-card h4 {
+            color: #4a5568;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .chart-container {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 400px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        .data-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .data-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-right: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+
+        .status.info {
+            background: #bee3f8;
+            color: #2a4365;
+            border: 1px solid #90cdf4;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .chunk-settings {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .controls-panel {
+                order: 1;
+            }
+            
+            .results-panel {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 Gas Flow Analysis Tool</h1>
+            <p>Advanced thermodynamic analysis with chunked processing for large datasets</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Controls Panel -->
+            <div class="controls-panel">
+                <div class="section">
+                    <h3>📁 File Input</h3>
+                    <div class="input-group">
+                        <label>Upload Excel File</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls" />
+                            <div class="file-input-button">Choose Excel File</div>
+                        </div>
+                        <div id="fileInfo" style="margin-top: 10px; font-size: 0.9rem; color: #666;"></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>⚡ Processing Settings</h3>
+                    <div class="chunk-settings">
+                        <div class="input-group">
+                            <label>Chunk Size (rows per batch)</label>
+                            <input type="number" id="chunkSizeInput" value="1000" min="100" max="10000" step="100" />
+                        </div>
+                        <div class="input-group">
+                            <label>Processing Delay (ms)</label>
+                            <input type="number" id="delayInput" value="50" min="0" max="1000" step="10" />
+                        </div>
+                        <small style="color: #666;">Larger files benefit from smaller chunks and longer delays to prevent browser freezing.</small>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>🌡️ Temperature Bounds</h3>
+                    <div class="input-group">
+                        <label>T1 Reference Temperature (°C)</label>
+                        <input type="number" id="t1Input" value="300" step="0.1" />
+                    </div>
+                    <div class="input-group">
+                        <label>T2 Temperature (°C)</label>
+                        <input type="number" id="t2Input" value="486.241" step="0.1" />
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>⚙️ System Parameters</h3>
+                    <div class="input-group">
+                        <label>Diameter (ft)</label>
+                        <input type="number" id="diameterInput" value="6" step="0.1" />
+                    </div>
+                    <div class="input-group">
+                        <label>Refractory (inches)</label>
+                        <input type="number" id="refractoryInput" value="6" step="0.1" />
+                    </div>
+                    <div class="input-group">
+                        <label>Pressure (atm)</label>
+                        <input type="number" id="pressureInput" value="1" step="0.01" />
+                    </div>
+                    <div class="input-group">
+                        <label>R Constant (atm*L/mol*K)</label>
+                        <input type="number" id="rConstantInput" value="0.0821" step="0.0001" />
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>🔬 Gas Composition Factors</h3>
+                    <div class="input-group">
+                        <label>CO₂ Factor</label>
+                        <input type="number" id="co2FactorInput" value="1.03552318948896" step="0.000001" />
+                    </div>
+                    <div class="input-group">
+                        <label>H₂O Factor</label>
+                        <input type="number" id="h2oFactorInput" value="3.76603433650984" step="0.000001" />
+                    </div>
+                    <div class="input-group">
+                        <label>N₂ Factor</label>
+                        <input type="number" id="n2FactorInput" value="17.440390559814" step="0.000001" />
+                    </div>
+                    <div class="input-group">
+                        <label>O₂ Factor</label>
+                        <input type="number" id="o2FactorInput" value="2.51572679168908" step="0.000001" />
+                    </div>
+                    <div class="input-group">
+                        <label>CO Factor</label>
+                        <input type="number" id="coFactorInput" value="0.000976810511041857" step="0.000000000001" />
+                    </div>
+                    <div class="input-group">
+                        <label>NOₓ Factor</label>
+                        <input type="number" id="noxFactorInput" value="0.011187614171608" step="0.000000000001" />
+                    </div>
+                </div>
+
+                <button id="processBtn" class="process-btn" disabled>
+                    🚀 Process Data
+                </button>
+
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar" id="progressBar">0%</div>
+                </div>
+
+                <div id="status"></div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="results-panel">
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('summary')">📊 Summary</button>
+                    <button class="tab" onclick="showTab('charts')">📈 Charts</button>
+                    <button class="tab" onclick="showTab('data')">📋 Data Table</button>
+                </div>
+
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing data...</p>
+                </div>
+
+                <!-- Summary Tab -->
+                <div id="summary-tab" class="tab-content active">
+                    <div class="summary-grid" id="summaryGrid">
+                        <!-- Summary cards will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Charts Tab -->
+                <div id="charts-tab" class="tab-content">
+                    <div class="chart-container">
+                        <canvas id="energyChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="flowChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Data Table Tab -->
+                <div id="data-tab" class="tab-content">
+                    <div style="margin-bottom: 15px;">
+                        <button id="downloadBtn" class="download-btn">💾 Download Processed Excel</button>
+                        <button id="downloadCsvBtn" class="download-btn">📄 Download CSV</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="dataTable" class="data-table">
+                            <!-- Table will be populated here -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables to store processed data
+        let processedData = [];
+        let originalFileName = '';
+        let isProcessing = false;
+        let processingCancelled = false;
+
+        // Enhanced Gas Flow Analysis Calculator with chunked processing
+        class ChunkedGasFlowAnalyzer {
+            constructor() {
+                this.constants = {
+                    MW_CO2: 44.01,
+                    MW_H2O: 18.01528,
+                    MW_N2: 28.0134,
+                    MW_O2: 31.999,
+                    MW_CO: 28.01,
+                    MW_NOx: 30.0061,
+                    energy_factor_CO2: 1.2135,
+                    energy_factor_H2O: 1.996,
+                    energy_factor_N2: 1.158,
+                    energy_factor_O2: 1.087552941,
+                    energy_factor_CO: 1.23723875,
+                    energy_factor_NOx: 1.183859,
+                };
+                this.updateConstants();
+            }
+
+            updateConstants() {
+                this.constants.pressure = parseFloat(document.getElementById('pressureInput').value);
+                this.constants.R_constant = parseFloat(document.getElementById('rConstantInput').value);
+                this.constants.T1 = parseFloat(document.getElementById('t1Input').value);
+                this.constants.factor_CO2 = parseFloat(document.getElementById('co2FactorInput').value);
+                this.constants.factor_H2O = parseFloat(document.getElementById('h2oFactorInput').value);
+                this.constants.factor_N2 = parseFloat(document.getElementById('n2FactorInput').value);
+                this.constants.factor_O2 = parseFloat(document.getElementById('o2FactorInput').value);
+                this.constants.factor_CO = parseFloat(document.getElementById('coFactorInput').value);
+                this.constants.factor_NOx = parseFloat(document.getElementById('noxFactorInput').value);
+            }
+
+            async processDataInChunks(data, chunkSize = 1000, delay = 50, onProgress = null) {
+                this.updateConstants();
+                const results = [];
+                const totalChunks = Math.ceil(data.length / chunkSize);
+                
+                console.log(`Processing ${data.length} rows in ${totalChunks} chunks of ${chunkSize} rows each`);
+                
+                for (let i = 0; i < totalChunks; i++) {
+                    if (processingCancelled) {
+                        console.log('Processing cancelled by user');
+                        break;
+                    }
+                    
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, data.length);
+                    const chunk = data.slice(start, end);
+                    
+                    console.log(`Processing chunk ${i + 1}/${totalChunks} (rows ${start + 1}-${end})`);
+                    
+                    // Process this chunk
+                    const chunkResults = this.processChunk(chunk, start);
+                    results.push(...chunkResults);
+                    
+                    // Update progress
+                    if (onProgress) {
+                        const progress = ((i + 1) / totalChunks) * 100;
+                        onProgress(progress, i + 1, totalChunks);
+                    }
+                    
+                    // Add delay to prevent UI freezing
+                    if (delay > 0 && i < totalChunks - 1) {
+                        await this.sleep(delay);
+                    }
+                }
+                
+                console.log(`Completed processing ${results.length} rows`);
+                return results;
+            }
+
+            processChunk(chunk, startIndex) {
+                return chunk.map((row, index) => {
+                    const result = { ...row };
+                    const globalIndex = startIndex + index;
+                    
+                    // Extract required values with safe parsing - exactly as in original
+                    const ngHighFlow = this.safeParseFloat(row['NG High Flow (NCMH)']) || 0;
+                    const ngLowFlow = this.safeParseFloat(row['NG Low Flow (NCMH)']) || 0;
+                    const exhaustTemp = this.safeParseFloat(row['Flue gas exhaust temperature (ºC)']) || 0;
+                    
+                    // 3. Calculate the natural gas flow rate (SCM/second)
+                    // Original Formula: =(F17+E17)/3600
+                    result['Natural GasFlow rate (SCM/second)'] = (ngLowFlow + ngHighFlow) / 3600;
+                    
+                    // 4. Calculate the molar flow rate (moles/second)
+                    // Original Formula: =((101.325)*(H17)*1000)/((8.314)*(273.15))
+                    result['n (Moles/second)'] = ((101.325) * result['Natural GasFlow rate (SCM/second)'] * 1000) / ((8.314) * (273.15));
+                    
+                    // 5. Calculate delta T in Kelvin
+                    // Original Formula: =(G17+273.15)-($J$7+273.15)
+                    result['Delta T (K)'] = (exhaustTemp + 273.15) - (this.constants.T1 + 273.15);
+                    
+                    // 6. Calculate delta T in degrees Celsius
+                    // Original Formula: =G17-$J$7
+                    result['Delta T (ºC)'] = exhaustTemp - this.constants.T1;
+                    
+                    // 7. Calculate the flow rate of the gases in kj/s
+                    // Original Formula: =(K17)*2.22*(K17)
+                    result['Q (NG) (kJ/s)'] = result['Delta T (K)'] * 2.22 * result['Delta T (K)'];
+                    
+                    // 8-9. Calculate gas component molar flow rates, mass flow rates, and energy contribution
+                    
+                    // CO2 calculations
+                    // Original Formula: =(1.03552318948896)*(I17)
+                    result['n (CO2)(Moles/second)'] = this.constants.factor_CO2 * result['n (Moles/second)'];
+                    
+                    // Original Formula: =M17*(44.01)
+                    result['m (CO2) (g/s)'] = result['n (CO2)(Moles/second)'] * this.constants.MW_CO2;
+                    
+                    // Original Formula: =(K17)*(N17/1000)*(1.2135)
+                    result['Q (CO2) (kJ/s)'] = result['Delta T (K)'] * (result['m (CO2) (g/s)'] / 1000) * this.constants.energy_factor_CO2;
+                    
+                    // H2O calculations
+                    // Original Formula: =(3.76603433650984)*(I17)
+                    result['n (H2O)(Moles/second)'] = this.constants.factor_H2O * result['n (Moles/second)'];
+                    
+                    // Original Formula: =(P17)*(18.01528)
+                    result['m (H2O) (g/s)'] = result['n (H2O)(Moles/second)'] * this.constants.MW_H2O;
+                    
+                    // Original Formula: =(K17)*(Q17/1000)*(1.996)
+                    result['Q (H2O) (kJ/s)'] = result['Delta T (K)'] * (result['m (H2O) (g/s)'] / 1000) * this.constants.energy_factor_H2O;
+                    
+                    // N2 calculations
+                    // Original Formula: =(17.440390559814)*(I17)
+                    result['n (N2)(mo/s)'] = this.constants.factor_N2 * result['n (Moles/second)'];
+                    
+                    // Original Formula: =(S17)*(28.0134)
+                    result['m (N2) (g/s)'] = result['n (N2)(mo/s)'] * this.constants.MW_N2;
+                    
+                    // Original Formula: =(K17)*(T17/1000)*(1.158)
+                    result['Q (N2) (kJ/s)'] = result['Delta T (K)'] * (result['m (N2) (g/s)'] / 1000) * this.constants.energy_factor_N2;
+                    
+                    // O2 calculations
+                    // Original Formula: =(2.51572679168908)*(I17)
+                    result['n (O2)(mol/s)'] = this.constants.factor_O2 * result['n (Moles/second)'];
+                    
+                    // Original Formula: =(V17)*(31.999)
+                    result['m (O2) (g/s)'] = result['n (O2)(mol/s)'] * this.constants.MW_O2;
+                    
+                    // Original Formula: =(K17)*(W17/1000)*(1.087552941)
+                    result['Q (O2) (kJ/s)'] = result['Delta T (K)'] * (result['m (O2) (g/s)'] / 1000) * this.constants.energy_factor_O2;
+                    
+                    // CO calculations
+                    // Original Formula: =(0.000976810511041857)*(I17)
+                    result['n (CO)(mol/s)'] = this.constants.factor_CO * result['n (Moles/second)'];
+                    
+                    // Original Formula: =(Y17)*(28.01)
+                    result['m (CO) (g/s)'] = result['n (CO)(mol/s)'] * this.constants.MW_CO;
+                    
+                    // Original Formula: =(K17)*(Z17/1000)*(1.23723875)
+                    result['Q (CO) (kJ/s)'] = result['Delta T (K)'] * (result['m (CO) (g/s)'] / 1000) * this.constants.energy_factor_CO;
+                    
+                    // NOx calculations
+                    // Original Formula: =(0.011187614171608)*(I17)
+                    result['n (NOx)(mol/s)'] = this.constants.factor_NOx * result['n (Moles/second)'];
+                    
+                    // Original Formula: =(AB17)*(30.0061)
+                    result['m (NOx) (g/s)'] = result['n (NOx)(mol/s)'] * this.constants.MW_NOx;
+                    
+                    // Original Formula: =(K17)*(AC17/1000)*(1.183859)
+                    result['Q (NOx) (kJ/s)'] = result['Delta T (K)'] * (result['m (NOx) (g/s)'] / 1000) * this.constants.energy_factor_NOx;
+                    
+                    // Calculate sum of exhaust gases energy
+                    // Original Formula: =SUM(O17,R17,U17,X17,AA17,AD17)
+                    result['Sum of the Energy in exhaust gases (kJ/s)'] = (
+                        result['Q (CO2) (kJ/s)'] + result['Q (H2O) (kJ/s)'] + result['Q (N2) (kJ/s)'] + 
+                        result['Q (O2) (kJ/s)'] + result['Q (CO) (kJ/s)'] + result['Q (NOx) (kJ/s)']
+                    );
+                    
+                    // Calculate volumetric flow rates for each gas component
+                    
+                    // Original Formula: =(((M17)*($N$5)*(G17+273.15))*0.001)/($N$4)
+                    result['Q (C02, m^3/s)'] = (
+                        ((result['n (CO2)(Moles/second)'] * this.constants.R_constant * (exhaustTemp + 273.15)) * 0.001)
+                        / this.constants.pressure
+                    );
+                    
+                    // Original Formula: =((((P17)*($N$5)*(G17+273.15))*0.001))/($N$4)
+                    result['Q (H2O, m^3/s)'] = (
+                        ((result['n (H2O)(Moles/second)'] * this.constants.R_constant * (exhaustTemp + 273.15)) * 0.001)
+                        / this.constants.pressure
+                    );
+                    
+                    // Original Formula: =(((S17)*(0.0821)*(G17+273.15))*0.001)
+                    // Note: This formula in original uses hardcoded 0.0821 instead of $N$5
+                    result['Q (N2, m^3/s)'] = (
+                        ((result['n (N2)(mo/s)'] * 0.0821 * (exhaustTemp + 273.15)) * 0.001)
+                    );
+                    
+                    // Original Formula: =((((V17)*($N$5)*(G17+273.15))*0.001))/($N$4)
+                    result['Q (O2, m^3/s)'] = (
+                        ((result['n (O2)(mol/s)'] * this.constants.R_constant * (exhaustTemp + 273.15)) * 0.001)
+                        / this.constants.pressure
+                    );
+                    
+                    // Original Formula: =((((Y17)*($N$5)*(G17+273.15))*0.001))/($N$4)
+                    result['Q (CO, m^3/s)'] = (
+                        ((result['n (CO)(mol/s)'] * this.constants.R_constant * (exhaustTemp + 273.15)) * 0.001)
+                        / this.constants.pressure
+                    );
+                    
+                    // Original Formula: =((((AB17)*($N$5)*(G17+273.15))*0.001))/($N$4)
+                    result['Q (NOx, m^3/s)'] = (
+                        ((result['n (NOx)(mol/s)'] * this.constants.R_constant * (exhaustTemp + 273.15)) * 0.001)
+                        / this.constants.pressure
+                    );
+                    
+                    // Calculate sum of volumetric flow rates
+                    // Original Formula: =SUM(AF17,AG17,AH17,AI17,AJ17,AK17)
+                    result['Sum of the Volumetric Flow Rates (m^3/s)'] = (
+                        result['Q (C02, m^3/s)'] + result['Q (H2O, m^3/s)'] + result['Q (N2, m^3/s)'] + 
+                        result['Q (O2, m^3/s)'] + result['Q (CO, m^3/s)'] + result['Q (NOx, m^3/s)']
+                    );
+                    
+                    // Calculate the velocity of the exhaust gases based on area
+                    // We calculate area as PI()*((Diameter/2)^2)
+                    // Where Diameter = (Diameter_ft/3.281)-(Refractory_inches/39.37)
+                    const diameterFt = parseFloat(document.getElementById('diameterInput').value);
+                    const refractoryInches = parseFloat(document.getElementById('refractoryInput').value);
+                    const diameterM = (diameterFt / 3.281) - (refractoryInches / 39.37);
+                    const areaM2 = Math.PI * Math.pow((diameterM / 2), 2);
+                    
+                    // Original Formula: =AL17/$P$3
+                    result['Velocity of the exhaust gases (m/s)'] = result['Sum of the Volumetric Flow Rates (m^3/s)'] / areaM2;
+                    
+                    return result;
+                });
+            }
+
+            calculateSummary(results) {
+                if (!results || results.length === 0) return {};
+                
+                const energyValues = results.map(r => r['Sum of the Energy in exhaust gases (kJ/s)']).filter(v => !isNaN(v));
+                const flowValues = results.map(r => r['Sum of the Volumetric Flow Rates (m^3/s)']).filter(v => !isNaN(v));
+                const velocityValues = results.map(r => r['Velocity of the exhaust gases (m/s)']).filter(v => !isNaN(v));
+                const tempValues = results.map(r => this.safeParseFloat(r['Flue gas exhaust temperature (ºC)'])).filter(v => !isNaN(v));
+                
+                return {
+                    'Total Rows Processed': results.length,
+                    'Maximum Energy (kJ/s)': Math.max(...energyValues),
+                    'Minimum Energy (kJ/s)': Math.min(...energyValues),
+                    'Average Energy (kJ/s)': energyValues.reduce((a, b) => a + b, 0) / energyValues.length,
+                    'Average Volumetric Flow Rate (m^3/s)': flowValues.reduce((a, b) => a + b, 0) / flowValues.length,
+                    'Maximum Velocity (m/s)': Math.max(...velocityValues),
+                    'Minimum Velocity (m/s)': Math.min(...velocityValues),
+                    'Average Velocity (m/s)': velocityValues.reduce((a, b) => a + b, 0) / velocityValues.length,
+                    'Upper bound temperature (°C)': Math.max(...tempValues),
+                    'Lower bound temperature (°C)': Math.min(...tempValues),
+                    'Average temperature (°C)': tempValues.reduce((a, b) => a + b, 0) / tempValues.length,
+                };
+            }
+
+            safeParseFloat(value) {
+                if (value === null || value === undefined || value === '') return 0;
+                const parsed = parseFloat(value);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Initialize the analyzer
+        const analyzer = new ChunkedGasFlowAnalyzer();
+
+        // File handling - Fixed and enhanced
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file type
+                const validTypes = [
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+                    'application/vnd.ms-excel', // .xls
+                ];
+                
+                if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
+                    showStatus('Please select a valid Excel file (.xlsx or .xls)', 'error');
+                    this.value = ''; // Clear the input
+                    return;
+                }
+                
+                originalFileName = file.name.replace(/\.[^/.]+$/, "");
+                document.querySelector('.file-input-button').textContent = file.name;
+                document.getElementById('processBtn').disabled = false;
+                
+                // Show file info
+                const fileInfo = document.getElementById('fileInfo');
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                fileInfo.innerHTML = `
+                    <strong>File:</strong> ${file.name}<br>
+                    <strong>Size:</strong> ${fileSize} MB<br>
+                    <strong>Type:</strong> ${file.type || 'Excel file'}
+                `;
+                
+                showStatus(`File "${file.name}" (${fileSize} MB) loaded successfully. Ready to process.`, 'success');
+                
+                // Reset processed data
+                processedData = [];
+                updateUI();
+            } else {
+                // Reset when no file selected
+                document.querySelector('.file-input-button').textContent = 'Choose Excel File';
+                document.getElementById('processBtn').disabled = true;
+                document.getElementById('fileInfo').innerHTML = '';
+                processedData = [];
+                updateUI();
+            }
+        });
+
+        // Process button with enhanced chunked processing
+        document.getElementById('processBtn').addEventListener('click', async function() {
+            if (isProcessing) {
+                // Cancel processing
+                processingCancelled = true;
+                showStatus('Cancelling processing...', 'info');
+                return;
+            }
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('Please select an Excel file first.', 'error');
+                return;
+            }
+            
+            await processExcelFileChunked(file);
+        });
+
+        // Enhanced Excel file processing with chunking
+        async function processExcelFileChunked(file) {
+            isProcessing = true;
+            processingCancelled = false;
+            
+            // Update button to show cancel option
+            const processBtn = document.getElementById('processBtn');
+            processBtn.textContent = '⏹️ Cancel Processing';
+            processBtn.style.background = 'linear-gradient(135deg, #e53e3e 0%, #c53030 100%)';
+            
+            showLoading(true);
+            showProgress(0);
+            showStatus('Reading Excel file...', 'info');
+            
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Find the correct sheet
+                    let sheetName = 'Refined Gerdau Data';
+                    if (!workbook.Sheets[sheetName]) {
+                        sheetName = workbook.SheetNames[0];
+                        console.log(`"Refined Gerdau Data" sheet not found. Using "${sheetName}" instead.`);
+                    }
+                    
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // Convert to JSON starting from row 16
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                        range: 15,  // Start from row 16 (0-indexed)
+                        header: 1,
+                        defval: ""
+                    });
+                    
+                    if (jsonData.length === 0) {
+                        throw new Error('No data found in the Excel file starting from row 16');
+                    }
+                    
+                    console.log(`Found ${jsonData.length} rows of data`);
+                    showStatus(`Found ${jsonData.length} rows. Starting chunked processing...`, 'info');
+                    
+                    // Get processing settings
+                    const chunkSize = parseInt(document.getElementById('chunkSizeInput').value) || 1000;
+                    const delay = parseInt(document.getElementById('delayInput').value) || 50;
+                    
+                    // Process the data in chunks
+                    const results = await analyzer.processDataInChunks(
+                        jsonData, 
+                        chunkSize, 
+                        delay, 
+                        (progress, currentChunk, totalChunks) => {
+                            showProgress(progress);
+                            showStatus(`Processing chunk ${currentChunk}/${totalChunks} (${progress.toFixed(1)}%)`, 'info');
+                        }
+                    );
+                    
+                    if (processingCancelled) {
+                        showStatus('Processing was cancelled by user.', 'info');
+                        processedData = [];
+                    } else {
+                        processedData = results;
+                        const summary = analyzer.calculateSummary(processedData);
+                        
+                        showStatus(`Successfully processed ${processedData.length} rows!`, 'success');
+                        
+                        // Update the UI with results
+                        updateSummary(summary);
+                        updateCharts(processedData);
+                        updateDataTable(processedData);
+                        
+                        // Show download buttons
+                        document.getElementById('downloadBtn').style.display = 'inline-block';
+                        document.getElementById('downloadCsvBtn').style.display = 'inline-block';
+                    }
+                    
+                } catch (error) {
+                    console.error('File processing error:', error);
+                    showStatus(`Error processing file: ${error.message}`, 'error');
+                    processedData = [];
+                } finally {
+                    isProcessing = false;
+                    processingCancelled = false;
+                    showLoading(false);
+                    hideProgress();
+                    
+                    // Reset button
+                    processBtn.textContent = '🚀 Process Data';
+                    processBtn.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+                }
+            };
+            
+            reader.onerror = function() {
+                showStatus('Error reading the file. Please try again.', 'error');
+                isProcessing = false;
+                showLoading(false);
+                hideProgress();
+                
+                // Reset button
+                processBtn.textContent = '🚀 Process Data';
+                processBtn.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // UI Update functions
+        function updateSummary(summary) {
+            const summaryGrid = document.getElementById('summaryGrid');
+            summaryGrid.innerHTML = '';
+            
+            Object.entries(summary).forEach(([key, value]) => {
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.innerHTML = `
+                    <h4>${key}</h4>
+                    <div class="value">${typeof value === 'number' ? value.toFixed(6) : value}</div>
+                `;
+                summaryGrid.appendChild(card);
+            });
+        }
+
+        function updateCharts(data) {
+            if (!data || data.length === 0) return;
+            
+            // Sample data for charts (take every nth point for performance)
+            const sampleSize = Math.min(200, data.length);
+            const step = Math.max(1, Math.floor(data.length / sampleSize));
+            const sampledData = data.filter((_, index) => index % step === 0);
+            
+            // Energy Chart
+            const energyCtx = document.getElementById('energyChart').getContext('2d');
+            
+            if (window.energyChart instanceof Chart) {
+                window.energyChart.destroy();
+            }
+            
+            window.energyChart = new Chart(energyCtx, {
+                type: 'line',
+                data: {
+                    labels: sampledData.map((_, index) => `Point ${index + 1}`),
+                    datasets: [{
+                        label: 'Total Energy (kJ/s)',
+                        data: sampledData.map(row => row['Sum of the Energy in exhaust gases (kJ/s)']),
+                        borderColor: 'rgb(102, 126, 234)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Energy Output Over Time'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Energy (kJ/s)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Flow Rate Chart
+            const flowCtx = document.getElementById('flowChart').getContext('2d');
+            
+            if (window.flowChart instanceof Chart) {
+                window.flowChart.destroy();
+            }
+            
+            window.flowChart = new Chart(flowCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['CO₂', 'H₂O', 'N₂', 'O₂', 'CO', 'NOₓ'],
+                    datasets: [{
+                        label: 'Average Energy Contribution (kJ/s)',
+                        data: [
+                            sampledData.reduce((sum, row) => sum + (row['Q (CO2) (kJ/s)'] || 0), 0) / sampledData.length,
+                            sampledData.reduce((sum, row) => sum + (row['Q (H2O) (kJ/s)'] || 0), 0) / sampledData.length,
+                            sampledData.reduce((sum, row) => sum + (row['Q (N2) (kJ/s)'] || 0), 0) / sampledData.length,
+                            sampledData.reduce((sum, row) => sum + (row['Q (O2) (kJ/s)'] || 0), 0) / sampledData.length,
+                            sampledData.reduce((sum, row) => sum + (row['Q (CO) (kJ/s)'] || 0), 0) / sampledData.length,
+                            sampledData.reduce((sum, row) => sum + (row['Q (NOx) (kJ/s)'] || 0), 0) / sampledData.length,
+                        ],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 205, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 205, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Average Energy Contribution by Gas Component'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Energy (kJ/s)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDataTable(data) {
+            if (!data || data.length === 0) return;
+            
+            const table = document.getElementById('dataTable');
+            table.innerHTML = '';
+            
+            // Create header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            
+            const columns = Object.keys(data[0]);
+            columns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            // Create body with first 100 rows for performance
+            const tbody = document.createElement('tbody');
+            const displayRows = data.slice(0, 100);
+            
+            displayRows.forEach(row => {
+                const tr = document.createElement('tr');
+                columns.forEach(col => {
+                    const td = document.createElement('td');
+                    const value = row[col];
+                    if (typeof value === 'number') {
+                        td.textContent = value.toFixed(6);
+                    } else {
+                        td.textContent = value || '';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            
+            table.appendChild(tbody);
+            
+            // Add note if data was truncated
+            if (data.length > 100) {
+                const existingNote = table.parentNode.querySelector('.data-note');
+                if (existingNote) existingNote.remove();
+                
+                const note = document.createElement('p');
+                note.className = 'data-note';
+                note.style.marginTop = '10px';
+                note.style.fontStyle = 'italic';
+                note.style.color = '#666';
+                note.textContent = `Showing first 100 rows of ${data.length} total rows. Download the complete dataset using the buttons above.`;
+                table.parentNode.appendChild(note);
+            }
+        }
+
+        function updateUI() {
+            if (!processedData || processedData.length === 0) {
+                // Clear all displays
+                document.getElementById('summaryGrid').innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No data processed yet. Upload an Excel file and click Process Data.</p>';
+                
+                // Clear charts
+                if (window.energyChart instanceof Chart) {
+                    window.energyChart.destroy();
+                }
+                if (window.flowChart instanceof Chart) {
+                    window.flowChart.destroy();
+                }
+                
+                // Clear table
+                document.getElementById('dataTable').innerHTML = '';
+                
+                // Hide download buttons
+                document.getElementById('downloadBtn').style.display = 'none';
+                document.getElementById('downloadCsvBtn').style.display = 'none';
+            }
+        }
+
+        // Download functions
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (!processedData || processedData.length === 0) {
+                showStatus('No processed data available for download.', 'error');
+                return;
+            }
+            
+            downloadExcel(processedData, `${originalFileName}_processed.xlsx`);
+        });
+
+        document.getElementById('downloadCsvBtn').addEventListener('click', function() {
+            if (!processedData || processedData.length === 0) {
+                showStatus('No processed data available for download.', 'error');
+                return;
+            }
+            
+            downloadCSV(processedData, `${originalFileName}_processed.csv`);
+        });
+
+        function downloadExcel(data, filename) {
+            try {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, ws, "Processed Data");
+                XLSX.writeFile(wb, filename);
+                showStatus(`Excel file "${filename}" downloaded successfully.`, 'success');
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus(`Error downloading Excel file: ${error.message}`, 'error');
+            }
+        }
+
+        function downloadCSV(data, filename) {
+            try {
+                if (!data || data.length === 0) return;
+                
+                const columns = Object.keys(data[0]);
+                const csvContent = [
+                    columns.join(','),
+                    ...data.map(row => 
+                        columns.map(col => {
+                            const value = row[col];
+                            if (typeof value === 'string' && value.includes(',')) {
+                                return `"${value}"`;
+                            }
+                            return value || '';
+                        }).join(',')
+                    )
+                ].join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showStatus(`CSV file "${filename}" downloaded successfully.`, 'success');
+                }
+            } catch (error) {
+                console.error('CSV download error:', error);
+                showStatus(`Error downloading CSV file: ${error.message}`, 'error');
+            }
+        }
+
+        // Progress bar functions
+        function showProgress(percentage) {
+            const container = document.getElementById('progressContainer');
+            const bar = document.getElementById('progressBar');
+            
+            container.style.display = 'block';
+            bar.style.width = percentage + '%';
+            bar.textContent = Math.round(percentage) + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Utility functions
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            loading.style.display = show ? 'block' : 'none';
+        }
+
+        // Initialize
+        document.getElementById('downloadBtn').style.display = 'none';
+        document.getElementById('downloadCsvBtn').style.display = 'none';
+        updateUI();
+
+        // Input validation
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('change', function() {
+                if (this.value === '' || isNaN(this.value)) {
+                    this.style.borderColor = '#e53e3e';
+                    showStatus('Invalid number entered. Please check your inputs.', 'error');
+                } else {
+                    this.style.borderColor = '#e2e8f0';
+                }
+            });
+        });
+
+        console.log('Enhanced Gas Flow Analysis Tool with chunked processing initialized successfully.');

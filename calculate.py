@@ -19,7 +19,7 @@ from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font, Alignment
 
-def process_excel_file(input_file, output_file="processed_output.xlsx"):
+def process_excel_file(diameter, radius, flow_rate, input_file, output_file="processed_output.xlsx"):
     """
     Process the Excel file with gas flow data and output a new file with calculated values.
     
